@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35222.181
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonsterTradingCardsGame", "MonsterTradingCardsGame.csproj", "{EE7012ED-A1FD-4967-BCA3-FF83E238A2EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonsterTradingCardsGame.Tests", "..\MonsterTradingCardsGame.Tests\MonsterTradingCardsGame.Tests.csproj", "{7AE8946E-CA96-4374-850A-3004C72E9CE4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EE7012ED-A1FD-4967-BCA3-FF83E238A2EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE7012ED-A1FD-4967-BCA3-FF83E238A2EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE7012ED-A1FD-4967-BCA3-FF83E238A2EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE7012ED-A1FD-4967-BCA3-FF83E238A2EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AE8946E-CA96-4374-850A-3004C72E9CE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AE8946E-CA96-4374-850A-3004C72E9CE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AE8946E-CA96-4374-850A-3004C72E9CE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AE8946E-CA96-4374-850A-3004C72E9CE4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4D702A0C-9FA4-4C2D-8C7C-FEBB8037B746}
+	EndGlobalSection
+EndGlobal
