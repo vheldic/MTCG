@@ -8,6 +8,7 @@
     public class HttpResponse
     {
         const string HTTP_RESPONSE_HEADER = "HTTP/1.1";
+        const string STATUSCODE_401_MESSAGE = "Access token is missing or invalid";
         private readonly Dictionary<string, Dictionary<string, Dictionary<int,string>>> statusCodeMessages;
 
         public HttpResponse()
@@ -19,47 +20,47 @@
                         // Retrieves the user data for the given username
                         { "/users/{username}", new Dictionary<int, string>
                             {
-                                { 200, "Data successfully retrieved"},
-                                { 401, "Access token is missing or invalid"},
-                                { 404, "User not found"},
+                                { 200, "Data successfully retrieved" },
+                                { 401, STATUSCODE_401_MESSAGE },
+                                { 404, "User not found" },
                             }
                         },
                         // Shows a user's cards
                         { "/cards", new Dictionary<int, string>
                             {
-                                { 200, "The user has cards, the response contains these"},
-                                { 204, "The request was fine, but the user doesn't have any cards"},
-                                { 401, "Access token is missing or invalid"},
+                                { 200, "The user has cards, the response contains these" },
+                                { 204, "The request was fine, but the user doesn't have any cards" },
+                                { 401, STATUSCODE_401_MESSAGE },
                             }
                         },
                         // Shows the user's currently configured deck
                         { "/deck", new Dictionary<int, string>
                             {
-                                { 200, "The deck has cards, the response contains these"},
-                                { 204, "The request was fine, but the deck doesn't have any cards"},
-                                { 401, "Access token is missing or invalid"},
+                                { 200, "The deck has cards, the response contains these" },
+                                { 204, "The request was fine, but the deck doesn't have any cards" },
+                                { 401, STATUSCODE_401_MESSAGE },
                             }
                         },
                         // Retrieves the stats for an individual user
                         { "/stats", new Dictionary<int, string>
                             {
-                                { 200, "The stats could be retrieved successfully"},
-                                { 401, "Access token is missing or invalid"},
+                                { 200, "The stats could be retrieved successfully" },
+                                { 401, STATUSCODE_401_MESSAGE },
                             }
                         },
                         // Retrieves the user scoreboard ordered by the user's ELO
                         { "/scoreboard", new Dictionary<int, string>
                             {
-                                { 200, "The scoreboard could be retrieved successfully"},
-                                { 401, "Access token is missing or invalid"},
+                                { 200, "The scoreboard could be retrieved successfully" },
+                                { 401, STATUSCODE_401_MESSAGE },
                             }
                         },
                         // Retrieves the currently available trading deals
                         { "/tradings", new Dictionary<int, string>
                             {
-                                { 200, "There are trading deals available, the response contains these"},
+                                { 200, "There are trading deals available, the response contains these" },
                                 { 204, "The request was fine, but there are no trading deals available" },
-                                { 401, "Access token is missing or invalid"},
+                                { 401, STATUSCODE_401_MESSAGE },
                             }
                         },
                         // other endpoints
@@ -85,7 +86,7 @@
                         { "/packages", new Dictionary<int, string>
                             {
                                 { 201, "Package and cards successfully created" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 403, "Provided user is not \"admin\"" },
                                 { 409, "At least one card in the packages already exists" },
                             }
@@ -94,7 +95,7 @@
                         { "/transactions/packages", new Dictionary<int, string>
                             {
                                 { 200, "A package has been successfully bought" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 403, "Not enough money for buying a card package" },
                                 { 404, "No card package available for buying" },
                             }
@@ -103,14 +104,14 @@
                         { "/battles", new Dictionary<int, string>
                             {
                                 { 200, "The battle has been carried out successfully" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                             }
                         },
                         // Creates a new trading deal
                         { "/tradings", new Dictionary<int, string>
                             {
                                 { 201, "Trading deal successfully created" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 403, "The deal contains a card that is not owned by the user or locked in the deck" },
                                 { 409, "A deal with this deal ID already exists" },
                             }
@@ -119,7 +120,7 @@
                         { "/tradings/{tradingdealid}", new Dictionary<int, string>
                             {
                                 { 200, "Trading deal successfully executed" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 403, "The offered card is not owned by the user, or the requirements are not met (Type, MinimumDamage), or the offered card is locked in the deck, or the user tries to trade with self" },
                                 { 404, "The provided deal ID was not found" },
                             }
@@ -133,7 +134,7 @@
                         { "/users/{username}", new Dictionary<int, string>
                             {
                                 { 200, "User sucessfully updated" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 404, "User not found" },
                             }
                         },
@@ -142,7 +143,7 @@
                             {
                                 { 200, "The deck has been successfully configured" },
                                 { 400, "The provided deck did not include the required amount of cards" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 403, "At least one of the provided cards does not belong to the user or is not available" },
                             }
                         },
@@ -155,7 +156,7 @@
                         { "/tradings/{tradingdealid}", new Dictionary<int, string>
                             {
                                 { 200, "Trading deal successfully deleted" },
-                                { 401, "Access token is missing or invalid" },
+                                { 401, STATUSCODE_401_MESSAGE },
                                 { 403, "The deal contains a card that is not owned by the user" },
                                 { 404, "The provided deal ID was not found" },
                             }
