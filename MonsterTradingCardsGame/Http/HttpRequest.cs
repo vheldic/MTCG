@@ -1,5 +1,4 @@
 ﻿using MonsterTradingCardsGame.GameClasses;
-using MonsterTradingCardsGame.Database;
 using System.Text.Json;
 
 namespace MonsterTradingCardsGame.Http
@@ -27,7 +26,10 @@ namespace MonsterTradingCardsGame.Http
             HandleRequest();
         }
 
-        private async Task HandleRequest()
+        /// <summary>
+        ///     Handles the request based on the HTTP-Method and endpoint.
+        /// </summary>
+        private async void HandleRequest()
         {
             HttpResponse httpResponse = new HttpResponse();
 
@@ -52,31 +54,38 @@ namespace MonsterTradingCardsGame.Http
                 case "GET":
                     switch (endpoint)
                     {
+                        // Shows a user's cards
                         case "/cards":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Shows the user's currently configured deck
                         case "/deck":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
-                        
+
+                        // Shows the user's currently configured deck
                         case "/deck?format=plain":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Retrieves the stats for an individual user
                         case "/stats":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Retrieves the user scoreboard ordered by the user's ELO
                         case "/scoreboard":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Retrieves the currently available trading deals
                         case "/tradings":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
                         default:
+                            // Retrieves the user data for the given username
                             if (endpoint.StartsWith("/users/"))
                             {
                                 // Get specific User
@@ -90,50 +99,54 @@ namespace MonsterTradingCardsGame.Http
                 case "POST":
                     switch (endpoint)
                     {
+                        // Register a new user
                         case "/users":
                             // Check if user already exists
-                            if (Database.Users.ContainsKey(username))
+                            if (Database.CheckUserExists(username))
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 409);
                             else
                             {
                                 // Register
-                                Database.Users.Add(username, new User(username, password));
-                                // Generate Token
-                                string token = GenerateToken(username);
+                                Database.RegisterUser(username, password);
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 201);
                             }
                             break;
 
+                        // Login with existing user
                         case "/sessions":
                             // Check user credentials
-                            if (Database.Users[username].Password != password)
+                            string token = Database.LoginUser(username, password);
+                            if (token == "")
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
                             else
                             {
                                 // Login
-                                // Generate Token
-                                string token = GenerateToken(username);
                                 Response = $"{httpResponse.GetResponseMessage(httpMethod, endpoint, 200)}\r\n{token}";
                             }
                             break;
 
+                        // Create new card packages (requires admin)
                         case "/packages":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Acquire a card package
                         case "/transactions/packages":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Enters the lobby to start a battle
                         case "/battles":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
+                        // Creates a new trading deal
                         case "/tradings":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
                         default:
+                            // Carry out a trade for the deal with the provided card
                             if (endpoint.StartsWith("/tradings/"))
                             {
                                 // Post specific trade
@@ -147,11 +160,13 @@ namespace MonsterTradingCardsGame.Http
                 case "PUT":
                     switch (endpoint)
                     {
+                        // Updates the user data for the given username
                         case "/deck":
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
                         default:
+                            // Configures the deck with four provided cards
                             if (endpoint.StartsWith("/users/"))
                             {
                                 // Edit specific User
@@ -163,6 +178,7 @@ namespace MonsterTradingCardsGame.Http
                     break;
 
                 case "DELETE":
+                    // Deletes an existing trading deal
                     if (endpoint.StartsWith("/tradings/"))
                     {
                         // Delete specific trade
@@ -175,11 +191,6 @@ namespace MonsterTradingCardsGame.Http
                     Response = HTTP_METHOD_ERROR;
                     break;
             }
-        }
-
-        private string GenerateToken(string username)
-        {
-            return $"{username}-mtcgToken";
         }
     }
 }

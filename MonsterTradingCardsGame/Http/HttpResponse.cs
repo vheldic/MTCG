@@ -167,6 +167,13 @@
             }; // end Dict
         }
 
+        /// <summary>
+        ///     Returns from the dictionary a the response for a specific request based on the HTTP-Method, endpoint and statuscode
+        /// </summary>
+        /// <param name="httpMethod">HTTP-Method from request</param>
+        /// <param name="endpoint">Endpoint from request</param>
+        /// <param name="statusCode">Statuscode to fetch</param>
+        /// <returns>Response-Message</returns>
         public string GetResponseMessage(string httpMethod, string endpoint, int statusCode)
         {
             string response = $"{HTTP_RESPONSE_HEADER} ";
