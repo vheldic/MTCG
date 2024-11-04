@@ -11,62 +11,86 @@
         FireElve = 6,
     }
 
-    public class Monster : ICardType
+    public class Monster : Card
     {
         public MonsterType MonsterType { get; set; }
 
-        public Monster() { }
-
-        public Monster(MonsterType monsterType) 
+        public Monster(string name, MonsterType monsterType, ElementType elementType, int damage)
+            : base(name, elementType, damage)
         {
             MonsterType = monsterType;
         }
 
-        public void Battle(Card OppCard)
+        public override BattleResult Battle(Card oppCard)
         {
-            ICardType OppCardType = OppCard.CardType;
+            MonsterType oppMonsterType = ((Monster) oppCard).MonsterType;
 
-            // Temp
-            //if (OppCardType is ICardType Monster)
-            //{
-            //    Console.WriteLine("IS MONSTER");
-            //    Console.WriteLine(MonsterType + " greift " + OppCardType.GetMonsterType() + " an");
-            //}
-            //else
-            //{
-            //    Console.WriteLine("IS SPELL");
-            //}
+            const string BATTLE_GOBLIN_DRAGON = "Goblins are too afraid of Dragons to attack.";
+            const string BATTLE_WIZZARD_ORK = "Wizzard can control Orks so they are not able to damage them.";
+            const string BATTLE_FIREELVE_DRAGON = "The FireElves know Dragons since they were little and can evade their attacks.";
 
-            /*
+            // Check monsters advantages/disadvantages against enemy monster
             switch (MonsterType)
             {
                 case MonsterType.Goblin:
-                    if (OppCardType is Monster && OppCardType.GetMonsterType() == MonsterType.Dragon)
+                    if (oppMonsterType == MonsterType.Dragon)
                     {
-
+                        Console.WriteLine(BATTLE_GOBLIN_DRAGON);
+                        return BattleResult.Lose;
                     }
                     break;
+
                 case MonsterType.Dragon:
+                    if (oppMonsterType == MonsterType.Goblin)
+                    {
+                        Console.WriteLine(BATTLE_GOBLIN_DRAGON);
+                        return BattleResult.Win;
+                    }
+                    if (oppMonsterType == MonsterType.FireElve)
+                    {
+                        Console.WriteLine(BATTLE_FIREELVE_DRAGON);
+                        return BattleResult.Lose;
+                    }
                     break;
+                        
                 case MonsterType.Wizzard:
+                    if (oppMonsterType == MonsterType.Ork)
+                    {
+                        Console.WriteLine(BATTLE_WIZZARD_ORK);
+                        return BattleResult.Win;
+                    }
                     break;
+                        
                 case MonsterType.Ork:
+                    if (oppMonsterType == MonsterType.Wizzard)
+                    {
+                        Console.WriteLine(BATTLE_WIZZARD_ORK);
+                        return BattleResult.Lose;
+                    }
                     break;
+                        
                 case MonsterType.Knight:
+                    // Monster has no advantages or disadvantages against other monsters
                     break;
+                        
                 case MonsterType.Kraken:
+                    // Monster has no advantages or disadvantages against other monsters
                     break;
+                        
                 case MonsterType.FireElve:
+                    if (oppMonsterType == MonsterType.Dragon)
+                    {
+                        Console.WriteLine(BATTLE_FIREELVE_DRAGON);
+                        return BattleResult.Win;
+                    }
                     break;
+                        
                 default:
                     throw new Exception("Unknown MonsterType");
             }
-            */
-        }
 
-        public MonsterType GetMonsterType()
-        {
-            return MonsterType;
+            // Compare damage
+            return CompareDamage(Damage, oppCard.Damage);
         }
     }
 }

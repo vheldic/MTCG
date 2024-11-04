@@ -6,25 +6,43 @@
         Water = 1,
         Fire = 2,
     }
+    public enum BattleResult
+    {
+        Win = 1,
+        Draw = 0,
+        Lose = -1
+    };
 
-    public class Card
+    public abstract class Card
     {
         public string Name { get; set; }
-        public ICardType CardType { get; set; }
         public ElementType ElementType { get; set; }
         public int Damage { get; set; }
 
-        public Card(string name, ICardType cardType, ElementType elementType, int damage)
+        public Card(string name, ElementType elementType, int damage)
         {
             Name = name;
-            CardType = cardType;
             ElementType = elementType;
             Damage = damage;
         }
 
-        public void Battle(Card OppCard)
+        /// <summary>
+        ///     Compares the damage of the battling cards to decide the winner
+        /// </summary>
+        /// <param name="oppDamage">Damage of the opposing card</param>
+        /// <returns>Result of the fight (Win, Lose or Draw)</returns>
+        public static BattleResult CompareDamage(int damage, int oppDamage)
         {
-            CardType.Battle(OppCard);
+            if (damage > oppDamage) return BattleResult.Win;
+            if (damage < oppDamage) return BattleResult.Lose;
+            return BattleResult.Draw;
         }
+        
+        /// <summary>
+        ///     Lets own card and opponents card battle to determine the winner
+        /// </summary>
+        /// <param name="oppCard">Selected card of opponent for battle</param>
+        /// <returns>Result of battle</returns>
+        public abstract BattleResult Battle(Card oppCard);
     }
 }
