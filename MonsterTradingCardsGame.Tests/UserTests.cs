@@ -35,6 +35,7 @@ namespace MonsterTradingCardsGame.Tests
 
             Assert.IsNotNull(user);
             Assert.AreEqual(20, user.Coins);
+            Assert.AreEqual(0, user.GamesPlayed);
             Assert.AreEqual(100, user.Elo);
         }
 
