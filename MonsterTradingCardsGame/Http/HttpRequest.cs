@@ -1,5 +1,6 @@
 ﻿using MonsterTradingCardsGame.GameClasses;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace MonsterTradingCardsGame.Http
@@ -56,17 +57,66 @@ namespace MonsterTradingCardsGame.Http
                     {
                         // Shows a user's cards
                         case "/cards":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            string username = Database.GetUsernameFromToken(bearer_token);
+
+                            // Get user's cards
+                            List<Card> cards = Database.GetUsersCards(username);
+                            if (cards.Count == 0)
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 204);
+                                break;
+                            }
+
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\n" + CardsListToString(cards);
                             break;
 
                         // Shows the user's currently configured deck
                         case "/deck":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            // Get user's deck
+                            List<Card> deck = Database.GetUsersDeck(username);
+                            if (deck.Count == 0)
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 204);
+                                break;
+                            }
+
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(deck);
                             break;
 
                         // Shows the user's currently configured deck
                         case "/deck?format=plain":
-                            Response += $" - {httpMethod} {endpoint}";
+                            endpoint = "/deck";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            // Get user's deck
+                            deck = Database.GetUsersDeck(username);
+                            if (deck.Count == 0)
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 204);
+                                break;
+                            }
+
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\n" + CardsListToString(deck);
                             break;
 
                         // Retrieves the stats for an individual user
@@ -170,7 +220,52 @@ namespace MonsterTradingCardsGame.Http
                     {
                         // Updates the user data for the given username
                         case "/deck":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            string username = Database.GetUsernameFromToken(bearer_token);
+
+                            // Get cards from body
+                            JsonArray body = [];
+                            try
+                            {
+                                body = JsonNode.Parse(jsonBody) as JsonArray ?? [];
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine("Error: " + e.Message);
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
+                                break;
+                            }
+
+                            // Check if 4 cards have been selected
+                            if (body.Count != 4)
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 400);
+                                break;
+                            }
+
+                            // Get card objects
+                            List<Card> cards = new List<Card>();
+                            foreach (string id in body)
+                            {
+                                Card? card = Database.GetUsersCardById(username, id);
+                                if (card == null) break;
+                                cards.Add(card);
+                            }
+
+                            if (cards.Count != 4)
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
+                                break;
+                            }
+
+                            // Update deck
+                            Database.UpdateUsersDeck(username, cards);
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
                             break;
 
                         default:
@@ -214,6 +309,22 @@ namespace MonsterTradingCardsGame.Http
             if (match.Success)
                 return match.Groups[1].Value;
             return "";
+        }
+
+        /// <summary>
+        ///     Creates output of cards in list as string
+        /// </summary>
+        /// <param name="cards">Cards in list</param>
+        /// <returns>List of cards as string</returns>
+        private string CardsListToString(List<Card> cards)
+        {
+            string cards_output = "";
+            for (int i = 0; i < cards.Count; i++)
+            {
+                cards_output += $"{i + 1}. {cards[i].Name} ({cards[i].ElementType}): {cards[i].Damage} Damage";
+                if (i != cards.Count - 1) cards_output += "\r\n";
+            }
+            return cards_output;
         }
     }
 }
