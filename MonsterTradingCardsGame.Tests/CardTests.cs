@@ -25,13 +25,12 @@ namespace MonsterTradingCardsGame.Tests
             card.Name = "SomeOtherName";
             ((Monster) card).MonsterType = MonsterType.Wizzard;
             card.ElementType = ElementType.Water;
-            card.Damage = 150;
 
             Assert.IsNotNull(card);
             Assert.IsTrue(card is Monster);
             Assert.AreEqual("SomeOtherName", card.Name);
             Assert.AreEqual(ElementType.Water, card.ElementType);
-            Assert.AreEqual(150, card.Damage);
+            Assert.AreEqual(500, card.Damage);
         }
 
         [TestMethod]

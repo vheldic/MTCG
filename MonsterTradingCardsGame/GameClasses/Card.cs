@@ -17,7 +17,7 @@
     {
         public string Name { get; set; }
         public ElementType ElementType { get; set; }
-        public int Damage { get; set; }
+        public int Damage { get; }
 
         public Card(string name, ElementType elementType, int damage)
         {
