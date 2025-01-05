@@ -5,10 +5,12 @@ namespace MonsterTradingCardsGame.Database
     public class Database
     {
         public Dictionary<string, User> Users { get; private set; }
+        public Dictionary<string, string> UserSessions { get; private set; }
 
         public Database()
         {
             Users = new Dictionary<string, User>();
+            UserSessions = new Dictionary<string, string>();
         }
 
         /// <summary>
@@ -33,7 +35,7 @@ namespace MonsterTradingCardsGame.Database
         }
 
         /// <summary>
-        ///     Logs in a user with their username and password
+        ///     Logs in a user with their username and password and adds the session to the database
         /// </summary>
         /// <param name="username">Username of user</param>
         /// <param name="password">Password of user</param>
@@ -42,13 +44,18 @@ namespace MonsterTradingCardsGame.Database
         {
             // Check if password is correct
             if (Users[username].Password != password) return "";
-            return GenerateToken(username);
+
+            // Generate token and add session to database
+            string token = GenerateToken(username);
+            UserSessions.Add(token, username); // TODO: später mit userid?
+
+            return token;
         }
 
         /// <summary>
         ///     Generates a token for user action based on the given username
         /// </summary>
-        /// <param name="username">Username od user</param>
+        /// <param name="username">Username of user</param>
         /// <returns>Generated token for user action</returns>
         private string GenerateToken(string username)
         {

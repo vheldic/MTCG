@@ -1,5 +1,6 @@
 ﻿using MonsterTradingCardsGame.GameClasses;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MonsterTradingCardsGame.Http
 {
@@ -41,12 +42,11 @@ namespace MonsterTradingCardsGame.Http
             string httpMethod = requestFirstLineParts[0];
             string endpoint = requestFirstLineParts[1];
 
+            // Get Bearer Token from Request
+            string bearer_token = GetTokenFromRequest();
+
             // Get data from Request-body
             string jsonBody = requestLines.LastOrDefault()?.Trim() ?? string.Empty;
-
-            var userObject = JsonSerializer.Deserialize<User>(jsonBody);
-            string username = userObject.Username;
-            string password = userObject.Password;
 
             Response = $"{HTTP_RESPONSE_HEADER} 501 Not implemented yet";   // Temp
             switch (httpMethod)
@@ -101,6 +101,10 @@ namespace MonsterTradingCardsGame.Http
                     {
                         // Register a new user
                         case "/users":
+                            var userObject = JsonSerializer.Deserialize<User>(jsonBody);
+                            string username = userObject?.Username ?? "";
+                            string password = userObject?.Password ?? "";
+
                             // Check if user already exists
                             if (Database.CheckUserExists(username))
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 409);
@@ -114,14 +118,18 @@ namespace MonsterTradingCardsGame.Http
 
                         // Login with existing user
                         case "/sessions":
+                            userObject = JsonSerializer.Deserialize<User>(jsonBody);
+                            username = userObject?.Username ?? "";
+                            password = userObject?.Password ?? "";
+
                             // Check user credentials
                             string token = Database.LoginUser(username, password);
-                            if (token == "")
+                            if (string.IsNullOrEmpty(token))
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
                             else
                             {
                                 // Login
-                                Response = $"{httpResponse.GetResponseMessage(httpMethod, endpoint, 200)}\r\n{token}";
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nToken: " + token;
                             }
                             break;
 
@@ -191,6 +199,21 @@ namespace MonsterTradingCardsGame.Http
                     Response = HTTP_METHOD_ERROR;
                     break;
             }
+
+            Response += "\r\n";
+        }
+
+        /// <summary>
+        ///     Gets the bearer token from the request header using regex
+        /// </summary>
+        /// <returns>The token sent in the request header</returns>
+        private string GetTokenFromRequest()
+        {
+            Match match = Regex.Match(Request, "Authorization: Bearer ([^\\s]+)");
+
+            if (match.Success)
+                return match.Groups[1].Value;
+            return "";
         }
     }
 }
