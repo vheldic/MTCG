@@ -73,7 +73,7 @@ namespace MonsterTradingCardsGame.Http
                                 break;
                             }
 
-                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\n" + CardsListToString(cards);
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(cards);
                             break;
 
                         // Shows the user's currently configured deck
@@ -121,12 +121,56 @@ namespace MonsterTradingCardsGame.Http
 
                         // Retrieves the stats for an individual user
                         case "/stats":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            // Get user data and create json object
+                            User user = Database.GetUser(username);
+                            var userstats = new
+                            {
+                                Username = user.Username,
+                                Elo = user.Elo,
+                                GamesPlayed = user.GamesPlayed,
+                                Wins = user.Wins,
+                                Draws = user.Draws,
+                                Losses = user.Losses
+                            };
+
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(userstats);
                             break;
 
                         // Retrieves the user scoreboard ordered by the user's ELO
                         case "/scoreboard":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+
+                            // Get scoreboard and create json Array
+                            List<User> users = Database.GetScoreboard();
+                            JsonArray jsonArray = new JsonArray();
+                            foreach (User userObject in users)
+                            {
+                                userstats = new
+                                {
+                                    Username = userObject.Username,
+                                    Elo = userObject.Elo,
+                                    GamesPlayed = userObject.GamesPlayed,
+                                    Wins = userObject.Wins,
+                                    Draws = userObject.Draws,
+                                    Losses = userObject.Losses
+                                };
+                                jsonArray.Add(userstats);
+                            }
+
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(jsonArray);
                             break;
 
                         // Retrieves the currently available trading deals

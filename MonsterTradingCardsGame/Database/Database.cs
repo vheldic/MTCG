@@ -133,5 +133,31 @@ namespace MonsterTradingCardsGame.Database
         {
             Decks[username] = cards;
         }
+
+        /// <summary>
+        ///     Gets the stats of a user
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <returns>Stats of user as json-string</returns>
+        public User GetUser(string username)
+        {
+            return Users[username];
+        }
+
+        /// <summary>
+        ///     Gets the scoreboard sorted by the elo
+        /// </summary>
+        /// <returns>List of users sorted by their elo</returns>
+        public List<User> GetScoreboard()
+        {
+            List<User> scoreboard = new List<User>();
+            // TODO: sort by elo
+            foreach (KeyValuePair<string, User> user in Users)
+            {
+                scoreboard.Add(user.Value);
+            }
+
+            return scoreboard;
+        }
     }
 }
