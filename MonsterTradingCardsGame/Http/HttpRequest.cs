@@ -133,12 +133,11 @@ namespace MonsterTradingCardsGame.Http
                             User? user = Database.GetUser(username);
                             var userstats = new
                             {
-                                Username = user.Username,
-                                Elo = user.Elo,
-                                Wins = user.Wins,
-                                Draws = user.Draws,
-                                Losses = user.Losses,
-                                GamesPlayed = user.GamesPlayed
+                                Elo = user?.Elo,
+                                Wins = user?.Wins,
+                                Draws = user?.Draws,
+                                Losses = user?.Losses,
+                                GamesPlayed = user?.GamesPlayed
                             };
 
                             Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(userstats);
@@ -158,16 +157,16 @@ namespace MonsterTradingCardsGame.Http
                             JsonArray jsonArray = new JsonArray();
                             foreach (User userObject in users)
                             {
-                                userstats = new
+                                var userdata = new
                                 {
-                                    Username = userObject.Username,
-                                    Elo = userObject.Elo,
-                                    Wins = userObject.Wins,
-                                    Draws = userObject.Draws,
-                                    Losses = userObject.Losses,
-                                    GamesPlayed = userObject.GamesPlayed,
+                                    Username = userObject?.Username ?? "",
+                                    Elo = userObject?.Elo,
+                                    Wins = userObject?.Wins,
+                                    Draws = userObject?.Draws,
+                                    Losses = userObject?.Losses,
+                                    GamesPlayed = userObject?.GamesPlayed,
                                 };
-                                jsonArray.Add(userstats);
+                                jsonArray.Add(userdata);
                             }
 
                             Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(jsonArray);
@@ -182,8 +181,33 @@ namespace MonsterTradingCardsGame.Http
                             // Retrieves the user data for the given username
                             if (endpoint.StartsWith("/users/"))
                             {
+                                string userToGet = endpoint.Split("/")[2];
+                                endpoint = "/users/{username}";
+
+                                // Check if User exists
+                                if (!Database.CheckUserExists(userToGet))
+                                {
+                                    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 404);
+                                    break;
+                                }
+
+                                // Check if token is used and valid
+                                if (!Database.CheckTokenIsValid(bearer_token) || userToGet != Database.GetUsernameFromToken(bearer_token))
+                                {
+                                    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                    break;
+                                }
+
                                 // Get specific User
-                                Response += $" - {httpMethod} starts with {endpoint}";
+                                user = Database.GetUser(userToGet);
+                                var userdata = new
+                                {
+                                    Name = user?.Name,
+                                    Bio = user?.Bio,
+                                    Image = user?.Image
+                                };
+
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(userdata);
                             }
                             else Response = ENDPOINT_ERROR;
                             break;
@@ -316,8 +340,32 @@ namespace MonsterTradingCardsGame.Http
                             // Configures the deck with four provided cards
                             if (endpoint.StartsWith("/users/"))
                             {
-                                // Edit specific User
-                                Response += $" - {httpMethod} starts with {endpoint}";
+                                string userToGet = endpoint.Split("/")[2];
+                                endpoint = "/users/{username}";
+
+                                // Check if User exists
+                                if (!Database.CheckUserExists(userToGet))
+                                {
+                                    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 404);
+                                    break;
+                                }
+
+                                // Check if token is used and valid
+                                username = Database.GetUsernameFromToken(bearer_token);
+                                if (!Database.CheckTokenIsValid(bearer_token) || userToGet != username)
+                                {
+                                    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                    break;
+                                }
+
+                                // Get userdata from body
+                                var userdata = JsonSerializer.Deserialize<User>(jsonBody);
+                                string? name = userdata?.Name;
+                                string? bio = userdata?.Bio;
+                                string? image = userdata?.Image;
+
+                                Database.EditProfile(username, name ?? "", bio ?? "", image ?? "");
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
                             }
                             else Response = ENDPOINT_ERROR;
                             break;

@@ -4,6 +4,9 @@
     {
         public string Username { get; set; }
         public string Password { get; set; }
+        public string Name { get; set; }
+        public string Bio { get; set; }
+        public string Image { get; set; }
         public int Coins { get; set; }
         public int Elo { get; set; }
         public int Wins { get; set; }
@@ -22,18 +25,6 @@
             Draws = 0;
             Losses = 0;
             Elo = 100;
-        }
-
-        public User(string username, int gamesplayed, int wins, int draws, int losses, int elo)
-        {
-            Username = username;
-            Password = "";
-            Coins = -1;
-            GamesPlayed = gamesplayed;
-            Wins = wins;
-            Draws = draws;
-            Losses = losses;
-            Elo = elo;
         }
     }
 }

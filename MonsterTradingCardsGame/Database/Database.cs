@@ -43,7 +43,10 @@ namespace MonsterTradingCardsGame.Database
                 CREATE TABLE IF NOT EXISTS users (
                     userID SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
-                    password VARCHAR(255) NOT NULL, 
+                    password VARCHAR(255) NOT NULL,
+                    name VARCHAR(255), 
+                    bio VARCHAR(255), 
+                    image VARCHAR(255), 
                     coins INTEGER DEFAULT 20 NOT NULL,
                     elo INTEGER DEFAULT 100 NOT NULL,
                     wins INTEGER DEFAULT 0 NOT NULL,
@@ -271,7 +274,7 @@ namespace MonsterTradingCardsGame.Database
             {
                 connection.Open();
 
-                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT username, elo, wins, draws, losses, gamesplayed FROM users WHERE username = @username", connection))
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT username, name, bio, image, elo, wins, draws, losses, gamesplayed FROM users WHERE username = @username", connection))
                 {
                     cmd.Parameters.AddWithValue("@username", username);
 
@@ -282,6 +285,9 @@ namespace MonsterTradingCardsGame.Database
                             user = new User
                             {
                                 Username = reader["username"].ToString() ?? "",
+                                Name = reader["name"].ToString() ?? "",
+                                Bio = reader["bio"].ToString() ?? "",
+                                Image = reader["image"].ToString() ?? "",
                                 Elo = (int)reader["elo"],
                                 Wins = (int)reader["wins"],
                                 Draws = (int)reader["draws"],
@@ -295,6 +301,32 @@ namespace MonsterTradingCardsGame.Database
             }
 
             return user;
+        }
+
+        /// <summary>
+        ///     Edits the profile page of user
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="name">Name of user</param>
+        /// <param name="bio">Bio of user</param>
+        /// <param name="image">Image of user</param>
+        public void EditProfile(string username, string name, string bio, string image)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("UPDATE users SET name = @name, bio = @bio, image = @image WHERE username = @username", connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@name", name);
+                    cmd.Parameters.AddWithValue("@bio", bio);
+                    cmd.Parameters.AddWithValue("@image", image);
+
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
         }
 
         /// <summary>
