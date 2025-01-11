@@ -22,10 +22,18 @@ namespace MonsterTradingCardsGame.Tests
 
             user.Username = "newusername";
             user.Password = "newpassword";
+            user.Wins = 3;
+            user.Draws = 1;
+            user.Losses = 1;
+            user.GamesPlayed = 5;
 
             Assert.IsNotNull(user);
             Assert.AreEqual("newusername", user.Username);
-            Assert.AreEqual("newpassword", user.Password);
+            Assert.AreEqual("newusername", user.Username);
+            Assert.AreEqual(3, user.Wins);
+            Assert.AreEqual(1, user.Draws);
+            Assert.AreEqual(1, user.Losses);
+            Assert.AreEqual(5, user.GamesPlayed);
         }
 
         [TestMethod]

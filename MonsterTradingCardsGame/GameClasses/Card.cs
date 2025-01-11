@@ -1,5 +1,10 @@
 ﻿namespace MonsterTradingCardsGame.GameClasses
 {
+    public enum CardTypes
+    {
+        Monster = 0,
+        Spell = 1,
+    }
     public enum ElementType
     {
         Normal = 0,
@@ -17,7 +22,7 @@
     {
         public string Name { get; set; }
         public ElementType ElementType { get; set; }
-        public int Damage { get; }
+        public int Damage { get; set; }
 
         public Card(string name, ElementType elementType, int damage)
         {

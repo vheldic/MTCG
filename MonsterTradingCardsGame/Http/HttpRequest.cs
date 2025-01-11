@@ -130,15 +130,15 @@ namespace MonsterTradingCardsGame.Http
                             username = Database.GetUsernameFromToken(bearer_token);
 
                             // Get user data and create json object
-                            User user = Database.GetUser(username);
+                            User? user = Database.GetUser(username);
                             var userstats = new
                             {
                                 Username = user.Username,
                                 Elo = user.Elo,
-                                GamesPlayed = user.GamesPlayed,
                                 Wins = user.Wins,
                                 Draws = user.Draws,
-                                Losses = user.Losses
+                                Losses = user.Losses,
+                                GamesPlayed = user.GamesPlayed
                             };
 
                             Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description: " + JsonSerializer.Serialize(userstats);
@@ -162,10 +162,10 @@ namespace MonsterTradingCardsGame.Http
                                 {
                                     Username = userObject.Username,
                                     Elo = userObject.Elo,
-                                    GamesPlayed = userObject.GamesPlayed,
                                     Wins = userObject.Wins,
                                     Draws = userObject.Draws,
-                                    Losses = userObject.Losses
+                                    Losses = userObject.Losses,
+                                    GamesPlayed = userObject.GamesPlayed,
                                 };
                                 jsonArray.Add(userstats);
                             }
@@ -293,22 +293,22 @@ namespace MonsterTradingCardsGame.Http
                             }
 
                             // Get card objects
-                            List<Card> cards = new List<Card>();
+                            List<string> cardIDs = new List<string>();
                             foreach (string id in body)
                             {
                                 Card? card = Database.GetUsersCardById(username, id);
                                 if (card == null) break;
-                                cards.Add(card);
+                                cardIDs.Add(id);
                             }
 
-                            if (cards.Count != 4)
+                            if (cardIDs.Count != 4)
                             {
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
                                 break;
                             }
 
                             // Update deck
-                            Database.UpdateUsersDeck(username, cards);
+                            Database.UpdateUsersDeck(username, cardIDs);
                             Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
                             break;
 
