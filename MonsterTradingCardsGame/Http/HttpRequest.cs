@@ -1,6 +1,4 @@
 ﻿using MonsterTradingCardsGame.GameClasses;
-using System.Net.Http;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -349,9 +347,9 @@ namespace MonsterTradingCardsGame.Http
                             Battle battle = new Battle(user, Database);
 
                             // Lock battle
-                            lock(battle)
+                            lock (battle)
                             {
-                                WaitInLobby(battle);
+                                _ = WaitInLobby(battle);
                                 while (string.IsNullOrEmpty(battle.Log)) { }
                             }
 
@@ -434,6 +432,25 @@ namespace MonsterTradingCardsGame.Http
                             // Update deck
                             Database.UpdateUsersDeck(username, cardIDs);
                             Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
+                            break;
+
+                        case "/coins":
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            if (!Database.CheckCanSpinWheel(username))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 422);
+                                break;
+                            }
+
+                            int coinsWon = Database.SpinWheel(username);
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + $"\r\nX-Description: {coinsWon} Coins won";
                             break;
 
                         default:
@@ -519,6 +536,11 @@ namespace MonsterTradingCardsGame.Http
             return cards_output;
         }
 
+        /// <summary>
+        ///     Waits in lobby for another user to start battle
+        /// </summary>
+        /// <param name="battle">Battle waiting for opponent</param>
+        /// <returns></returns>
         private async Task WaitInLobby(Battle battle)
         {
             Console.WriteLine("Waiting for the next client on port 10001...");

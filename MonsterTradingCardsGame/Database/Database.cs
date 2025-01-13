@@ -52,7 +52,8 @@ namespace MonsterTradingCardsGame.Database
                     wins INTEGER DEFAULT 0 NOT NULL,
                     draws INTEGER DEFAULT 0 NOT NULL,
                     losses INTEGER DEFAULT 0 NOT NULL,
-                    gamesPlayed INTEGER DEFAULT 0 NOT NULL
+                    gamesPlayed INTEGER DEFAULT 0 NOT NULL,
+                    spindate DATE
                 );
 
                 CREATE TABLE IF NOT EXISTS usersessions (
@@ -596,6 +597,105 @@ namespace MonsterTradingCardsGame.Database
             }
 
             return scoreboard;
+        }
+
+        /// <summary>
+        ///     Checks if given user can spin on the daily wheel
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <returns>If user can spin on wheel</returns>
+        public bool CheckCanSpinWheel(string username)
+        {
+            bool canSpin = true;
+
+            // Check if user already spinned today
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT spindate FROM users WHERE username = @username", connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    object? lastSpinDateObject = cmd.ExecuteScalar();
+                    if (lastSpinDateObject != DBNull.Value)
+                    {
+                        DateTime currentDate = DateTime.Now;
+                        DateTime lastSpinDate = (DateTime)lastSpinDateObject;
+
+                        canSpin = (currentDate - lastSpinDate).TotalDays >= 1;
+                    }
+                }
+                connection.Close();
+            }
+
+            return canSpin;
+        }
+
+        /// <summary>
+        ///     Spins the daily wheel
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <returns>Amount of coins won</returns>
+        public int SpinWheel(string username)
+        {
+            // Get random integer between 1 and 10
+            int coinsWon = new Random().Next(1, 11);
+
+            // Add coins won to user's coins
+            AwardCoins(username, coinsWon);
+
+            // Update date of wheel spin
+            UpdateWheelSpinDate(username);
+
+            return coinsWon;
+        }
+
+        /// <summary>
+        ///     Adds coins to user
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="coins">Coins to add</param>
+        public void AwardCoins(string username, int coinsWon)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand command = new NpgsqlCommand("UPDATE users SET coins = coins + @coinswon WHERE username = @username", connection))
+                {
+                    command.Parameters.AddWithValue("@username", username);
+                    command.Parameters.AddWithValue("@coinswon", coinsWon);
+
+                    command.ExecuteNonQuery();
+                }
+
+                connection.Close();
+            }
+        }
+
+        /// <summary>
+        ///     Updates the date when user spinned the wheel
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        public void UpdateWheelSpinDate(string username)
+        {
+            DateTime currentDate = DateTime.Now;
+
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand command = new NpgsqlCommand("UPDATE users SET spindate = @currentdate WHERE username = @username", connection))
+                {
+                    command.Parameters.AddWithValue("@username", username);
+                    command.Parameters.AddWithValue("@currentdate", currentDate);
+
+                    command.ExecuteNonQuery();
+                }
+
+                connection.Close();
+            }
         }
     }
 }

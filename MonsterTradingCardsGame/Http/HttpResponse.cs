@@ -147,6 +147,14 @@
                                 { 403, "At least one of the provided cards does not belong to the user or is not available" },
                             }
                         },
+                        // Spinns the daily wheel for coins
+                        { "/coins", new Dictionary<int, string>
+                            {
+                                { 200, "Coins have been added successfully" },
+                                { 401, STATUSCODE_401_MESSAGE },
+                                { 422, "Daily wheel was already used today" },
+                            }
+                        },
                         // other endpoints
                     }
                 },
