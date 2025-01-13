@@ -210,7 +210,7 @@ namespace MonsterTradingCardsGame.Database
         {
             // Check if given token is saved in database
             bool isValid = false;
-            using (connection = new NpgsqlConnection(connectionString))
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
 
@@ -322,6 +322,36 @@ namespace MonsterTradingCardsGame.Database
                     cmd.Parameters.AddWithValue("@name", name);
                     cmd.Parameters.AddWithValue("@bio", bio);
                     cmd.Parameters.AddWithValue("@image", image);
+
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
+        }
+
+        /// <summary>
+        ///     Updates the stats of a user after a battle
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="elo">New elo of user</param>
+        /// <param name="wins">New amount of user's wins</param>
+        /// <param name="draws">New amount of user's draws</param>
+        /// <param name="losses">New amount of user's losses</param>
+        /// <param name="gamesplayed">New amount of user's played games</param>
+        public void UpdateUserStats(string username, int elo, int wins, int draws, int losses, int gamesplayed)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("UPDATE users SET elo = @elo, wins = @wins, draws = @draws, losses = @losses, gamesPlayed = @gamesplayed WHERE username = @username", connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@elo", elo);
+                    cmd.Parameters.AddWithValue("@wins", wins);
+                    cmd.Parameters.AddWithValue("@draws", draws);
+                    cmd.Parameters.AddWithValue("@losses", losses);
+                    cmd.Parameters.AddWithValue("@gamesPlayed", gamesplayed);
 
                     cmd.ExecuteNonQuery();
                 }

@@ -1,4 +1,8 @@
 ﻿using MonsterTradingCardsGame.GameClasses;
+using System.Net.Http;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -16,12 +20,15 @@ namespace MonsterTradingCardsGame.Http
         const string HTTP_RESPONSE_HEADER = "HTTP/1.1";
         const string HTTP_METHOD_ERROR = $"{HTTP_RESPONSE_HEADER} 502 False or inproper HTTP Method";
         const string ENDPOINT_ERROR = $"{HTTP_RESPONSE_HEADER} 502 Endpoint does not exist";
+        private static readonly object battleResponseLock = new object();
         public string Request { get; private set; }
         public string Response { get; private set; }
         public Database.Database Database { get; private set; }
+        public TcpListener Listener { get; private set; }
 
-        public HttpRequest(string request, Database.Database db)
+        public HttpRequest(TcpListener listener, string request, Database.Database db)
         {
+            Listener = listener;
             Request = request;
             Response = "";
             Database = db;
@@ -44,7 +51,7 @@ namespace MonsterTradingCardsGame.Http
             string endpoint = requestFirstLineParts[1];
 
             // Get Bearer Token from Request
-            string bearer_token = GetTokenFromRequest();
+            string bearer_token = GetTokenFromRequest(Request);
 
             // Get data from Request-body
             string jsonBody = requestLines.LastOrDefault()?.Trim() ?? string.Empty;
@@ -66,7 +73,7 @@ namespace MonsterTradingCardsGame.Http
                             string username = Database.GetUsernameFromToken(bearer_token);
 
                             // Get user's cards
-                            List<Card> cards = Database.GetUsersCards(username);
+                            List<Card?> cards = Database.GetUsersCards(username);
                             if (cards.Count == 0)
                             {
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 204);
@@ -87,7 +94,7 @@ namespace MonsterTradingCardsGame.Http
                             username = Database.GetUsernameFromToken(bearer_token);
 
                             // Get user's deck
-                            List<Card> deck = Database.GetUsersDeck(username);
+                            List<Card?> deck = Database.GetUsersDeck(username);
                             if (deck.Count == 0)
                             {
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 204);
@@ -253,6 +260,73 @@ namespace MonsterTradingCardsGame.Http
 
                         // Create new card packages (requires admin)
                         case "/packages":
+                            //{ 409, "At least one card in the packages already exists" },
+                            //{ 201, "Package and cards successfully created" },
+
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            if (!Database.CheckUserIsAdmin(username))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
+                                break;
+                            }
+
+                            /////////////////////////////////////////
+                            // Get cards from body
+                            //JsonArray body = [];
+                            //try
+                            //{
+                            //    body = JsonNode.Parse(jsonBody) as JsonArray ?? [];
+                            //}
+                            //catch (Exception e)
+                            //{
+                            //    Console.WriteLine("Error: " + e.Message);
+                            //    break;
+                            //}
+                            // STOP --- ZUERST DATABASE
+                            // Get card objects
+                            //List<Card> cards = new List<Card>();
+                            //foreach (string cardObject in body)
+                            //{
+                            //    Card? card = Database.GetUsersCardById(username, id);
+                            //    if (card == null) break;
+                            //    cards.Add(card);
+                            //}
+
+                            //// temp
+                            //cards = [];
+                            //Card card_Dragon = new Monster("SomeDragon", MonsterType.Dragon, ElementType.Fire, 500);
+                            //Card card_Goblin = new Monster("SomeGoblin", MonsterType.Goblin, ElementType.Normal, 300);
+                            //Card card_Wizzard = new Monster("SomeWizzard", MonsterType.Wizzard, ElementType.Water, 700);
+                            //Card card_Ork = new Monster("SomeOrk", MonsterType.Ork, ElementType.Normal, 300);
+                            //Card card_FireElve = new Monster("SomeFireElve", MonsterType.FireElve, ElementType.Fire, 400);
+
+                            //if (username == "altenhof")
+                            //{
+                            //    cards.Add(card_Dragon);
+                            //    cards.Add(card_Goblin);
+                            //    cards.Add(card_Wizzard);
+                            //    cards.Add(card_FireElve);
+                            //}
+                            //// temp end
+
+                            //if (cards.Count != 4)
+                            //{
+                            //    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
+                            //    break;
+                            //}
+
+                            //// Update deck
+                            //Database.UpdateUsersDeck(username, cards);
+                            //Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
+                            //break;
+                            /////////////////////////////////////////
                             Response += $" - {httpMethod} {endpoint}";
                             break;
 
@@ -263,7 +337,33 @@ namespace MonsterTradingCardsGame.Http
 
                         // Enters the lobby to start a battle
                         case "/battles":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            User? user = Database.GetUser(username);
+                            Battle battle = new Battle(user, Database);
+
+                            // Lock battle
+                            lock(battle)
+                            {
+                                WaitInLobby(battle);
+                                while (string.IsNullOrEmpty(battle.Log)) { }
+                            }
+
+                            // Lock response
+                            lock (battleResponseLock)
+                            {
+                                var log = new
+                                {
+                                    Log = battle.Log,
+                                };
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200) + "\r\nX-Description:" + JsonSerializer.Serialize(log) + "\r\n";
+                            }
                             break;
 
                         // Creates a new trading deal
@@ -394,9 +494,9 @@ namespace MonsterTradingCardsGame.Http
         ///     Gets the bearer token from the request header using regex
         /// </summary>
         /// <returns>The token sent in the request header</returns>
-        private string GetTokenFromRequest()
+        private string GetTokenFromRequest(string request)
         {
-            Match match = Regex.Match(Request, "Authorization: Bearer ([^\\s]+)");
+            Match match = Regex.Match(request, "Authorization: Bearer ([^\\s]+)");
 
             if (match.Success)
                 return match.Groups[1].Value;
@@ -417,6 +517,69 @@ namespace MonsterTradingCardsGame.Http
                 if (i != cards.Count - 1) cards_output += "\r\n";
             }
             return cards_output;
+        }
+
+        private async Task WaitInLobby(Battle battle)
+        {
+            Console.WriteLine("Waiting for the next client on port 10001...");
+
+            try
+            {
+                TcpClient secondClient = await Listener.AcceptTcpClientAsync();
+
+                Console.WriteLine($"Second client connected: {secondClient.Client.RemoteEndPoint}");
+
+                // Second client's network stream
+                using (NetworkStream networkStream = secondClient.GetStream())
+                {
+                    try
+                    {
+                        var requestBytes = new byte[1024];
+                        await networkStream.ReadAsync(requestBytes, 0, requestBytes.Length);
+                        string request = Encoding.UTF8.GetString(requestBytes);
+                        Console.WriteLine($"Received request from {secondClient.Client.RemoteEndPoint}:\r\n{request}\r\n");
+
+                        string bearer_token2 = GetTokenFromRequest(request);
+                        string username2 = Database.GetUsernameFromToken(bearer_token2);
+                        string localResponse;
+                        if (!Database.CheckTokenIsValid(bearer_token2))
+                        {
+                            localResponse = new HttpResponse().GetResponseMessage("POST", "/battles", 401);
+                        }
+                        else
+                        {
+                            User? user = Database.GetUser(username2);
+                            battle.AddPlayer(user);
+                            battle.StartBattle();
+                            var log = new
+                            {
+                                Log = battle.Log,
+                            };
+                            localResponse = new HttpResponse().GetResponseMessage("POST", "/battles", 200) + "\r\nX-Description:" + JsonSerializer.Serialize(log);
+                        }
+
+                        Console.WriteLine($"Sending response:\r\n{localResponse}");
+
+                        byte[] responseData = Encoding.UTF8.GetBytes(localResponse);
+                        await networkStream.WriteAsync(responseData, 0, responseData.Length);
+                        //await networkStream.FlushAsync();
+                    }
+                    catch (IOException e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    finally
+                    {
+                        // Close second client connection
+                        Console.WriteLine($"Client disconnected: {secondClient.Client.RemoteEndPoint}\r\n");
+                        secondClient.Close();
+                    }
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                Console.WriteLine("No connection available.");
+            }
         }
     }
 }

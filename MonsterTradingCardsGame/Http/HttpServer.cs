@@ -26,11 +26,11 @@ namespace MonsterTradingCardsGame.Http
                 // Wait for a client connection
                 TcpClient client = await tcpListener.AcceptTcpClientAsync();
                 // Handle the client asynchronously
-                _ = Task.Run(() => HandleClient(client, db));
+                _ = Task.Run(() => HandleClient(client, tcpListener, db));
             }
         }
 
-        static async Task HandleClient(TcpClient client, Database.Database db)
+        static async Task HandleClient(TcpClient client, TcpListener listener, Database.Database db)
         {
             Console.WriteLine($"Client connected {client.Client.RemoteEndPoint}");
 
@@ -43,9 +43,9 @@ namespace MonsterTradingCardsGame.Http
                     var requestBytes = new byte[1024];
                     int bytesRead = await networkStream.ReadAsync(requestBytes, 0, requestBytes.Length);
                     string request = Encoding.UTF8.GetString(requestBytes, 0, bytesRead);
-                    Console.WriteLine($"Received request from {client.Client.RemoteEndPoint}:");
+                    Console.WriteLine($"Received request from {client.Client.RemoteEndPoint}:\r\n{request}\r\n");
 
-                    HttpRequest requestHandler = new HttpRequest(request, db);
+                    HttpRequest requestHandler = new HttpRequest(listener, request, db);
                     Console.WriteLine(requestHandler.Response);
 
                     byte[] responseData = Encoding.UTF8.GetBytes(requestHandler.Response);
