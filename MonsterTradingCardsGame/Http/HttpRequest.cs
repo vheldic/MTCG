@@ -258,9 +258,6 @@ namespace MonsterTradingCardsGame.Http
 
                         // Create new card packages (requires admin)
                         case "/packages":
-                            //{ 409, "At least one card in the packages already exists" },
-                            //{ 201, "Package and cards successfully created" },
-
                             // Check if token is used and valid
                             if (!Database.CheckTokenIsValid(bearer_token))
                             {
@@ -269,68 +266,85 @@ namespace MonsterTradingCardsGame.Http
                             }
                             username = Database.GetUsernameFromToken(bearer_token);
 
+                            // Check if user is admin
                             if (!Database.CheckUserIsAdmin(username))
                             {
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
                                 break;
                             }
 
-                            /////////////////////////////////////////
                             // Get cards from body
-                            //JsonArray body = [];
-                            //try
-                            //{
-                            //    body = JsonNode.Parse(jsonBody) as JsonArray ?? [];
-                            //}
-                            //catch (Exception e)
-                            //{
-                            //    Console.WriteLine("Error: " + e.Message);
-                            //    break;
-                            //}
-                            // STOP --- ZUERST DATABASE
-                            // Get card objects
-                            //List<Card> cards = new List<Card>();
-                            //foreach (string cardObject in body)
-                            //{
-                            //    Card? card = Database.GetUsersCardById(username, id);
-                            //    if (card == null) break;
-                            //    cards.Add(card);
-                            //}
+                            JsonArray body = [];
+                            try
+                            {
+                                body = JsonNode.Parse(jsonBody) as JsonArray ?? [];
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine("Error: " + e.Message);
+                                break;
+                            }
 
-                            //// temp
-                            //cards = [];
-                            //Card card_Dragon = new Monster("SomeDragon", MonsterType.Dragon, ElementType.Fire, 500);
-                            //Card card_Goblin = new Monster("SomeGoblin", MonsterType.Goblin, ElementType.Normal, 300);
-                            //Card card_Wizzard = new Monster("SomeWizzard", MonsterType.Wizzard, ElementType.Water, 700);
-                            //Card card_Ork = new Monster("SomeOrk", MonsterType.Ork, ElementType.Normal, 300);
-                            //Card card_FireElve = new Monster("SomeFireElve", MonsterType.FireElve, ElementType.Fire, 400);
+                            List<string> cardIDs = new List<string>();
+                            foreach (var cardObject in body)
+                            {
+                                string? cardID = cardObject["Id"]?.GetValue<string>() ?? "";
 
-                            //if (username == "altenhof")
-                            //{
-                            //    cards.Add(card_Dragon);
-                            //    cards.Add(card_Goblin);
-                            //    cards.Add(card_Wizzard);
-                            //    cards.Add(card_FireElve);
-                            //}
-                            //// temp end
+                                // Check if cards already exist
+                                if (Database.CheckCardExists(cardID))
+                                {
+                                    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 409);
+                                    break;
+                                }
+                                cardIDs.Add(cardID);
 
-                            //if (cards.Count != 4)
-                            //{
-                            //    Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
-                            //    break;
-                            //}
+                                // Get card values
+                                string name = cardObject["Name"].GetValue<string>();
+                                string element = cardObject["Element"].GetValue<string>();
+                                double damage = cardObject["Damage"].GetValue<double>();
 
-                            //// Update deck
-                            //Database.UpdateUsersDeck(username, cards);
-                            //Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
-                            //break;
-                            /////////////////////////////////////////
-                            Response += $" - {httpMethod} {endpoint}";
+                                // Create cards
+                                if (cardObject["Type"]?.ToString() == CardTypes.Spell.ToString())
+                                    Database.CreateSpellCard(cardID, name, element, (int)damage);
+                                else
+                                {
+                                    string monstertype = cardObject["Monstertype"]?.GetValue<string>();
+                                    Database.CreateMonsterCard(cardID, name, element, (int)damage, monstertype);
+                                }
+                            };
+
+                            // Create Package
+                            Database.CreatePackage(cardIDs);
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 201);
                             break;
 
                         // Acquire a card package
                         case "/transactions/packages":
-                            Response += $" - {httpMethod} {endpoint}";
+                            // Check if token is used and valid
+                            if (!Database.CheckTokenIsValid(bearer_token))
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 401);
+                                break;
+                            }
+                            username = Database.GetUsernameFromToken(bearer_token);
+
+                            // Check if user has enough coins
+                            if (Database.GetUsersCoins(username) < 5)
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
+                                break;
+                            }
+
+                            // Check if there are available packages
+                            if (!Database.CheckPackagesAvailable())
+                            {
+                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 404);
+                                break;
+                            }
+
+                            // Buy package
+                            Database.BuyPackage(username);
+                            Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
                             break;
 
                         // Enters the lobby to start a battle

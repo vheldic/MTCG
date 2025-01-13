@@ -18,6 +18,7 @@ namespace MonsterTradingCardsGame.Database
         {
             string query = """
                 DROP TABLE IF EXISTS decks;
+                DROP TABLE IF EXISTS packages;
                 DROP TABLE IF EXISTS cards;
                 DROP TABLE IF EXISTS usersessions;
                 DROP TABLE IF EXISTS users;
@@ -74,6 +75,20 @@ namespace MonsterTradingCardsGame.Database
                     FOREIGN KEY (userID) REFERENCES users(userID)
                 );
                 
+                CREATE TABLE IF NOT EXISTS packages (
+                    packID SERIAL PRIMARY KEY,
+                    card1ID VARCHAR(255),
+                    card2ID VARCHAR(255),
+                    card3ID VARCHAR(255),
+                    card4ID VARCHAR(255),
+                    card5ID VARCHAR(255),
+                    FOREIGN KEY (card1ID) REFERENCES cards(cardID),
+                    FOREIGN KEY (card2ID) REFERENCES cards(cardID),
+                    FOREIGN KEY (card3ID) REFERENCES cards(cardID),
+                    FOREIGN KEY (card4ID) REFERENCES cards(cardID),
+                    FOREIGN KEY (card5ID) REFERENCES cards(cardID)
+                );
+
                 CREATE TABLE IF NOT EXISTS decks (
                     deckID SERIAL PRIMARY KEY,
                     userID INTEGER,
@@ -361,6 +376,54 @@ namespace MonsterTradingCardsGame.Database
         }
 
         /// <summary>
+        ///     Gets the amount of coins the user has
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <returns>Amount of coins the user has</returns>
+        public int GetUsersCoins(string username)
+        {
+            int coins;
+
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT coins FROM users WHERE username = @username", connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    coins = (int)cmd.ExecuteScalar();
+                }
+                connection.Close();
+            }
+
+            return coins;
+        }
+        
+        /// <summary>
+        ///     Updates the amount of coins the user has
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="newCoins">New amount of coins the user has</param>
+        public void UpdateUsersCoins(string username, int newCoins)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand command = new NpgsqlCommand("UPDATE users SET coins = @newcoins WHERE username = @username", connection))
+                {
+                    command.Parameters.AddWithValue("@username", username);
+                    command.Parameters.AddWithValue("@newcoins", newCoins);
+
+                    command.ExecuteNonQuery();
+                }
+
+                connection.Close();
+            }
+        }
+
+        /// <summary>
         ///     Gets the card belonging to the user with the given username that has the given id
         /// </summary>
         /// <param name="username">Username of user</param>
@@ -384,7 +447,7 @@ namespace MonsterTradingCardsGame.Database
                         {
                             string? elementString = reader["element"].ToString();
                             string? name = reader["name"].ToString();
-                            int damage = (int)reader["damage"];
+                            int damage = Convert.ToInt32(reader["damage"]);
                             string? type = reader["type"].ToString();
                             string? monsterTypeString = reader["monstertype"].ToString();
 
@@ -423,7 +486,7 @@ namespace MonsterTradingCardsGame.Database
                         {
                             string? elementString = reader["element"].ToString();
                             string? name = reader["name"].ToString();
-                            int damage = (int)reader["damage"];
+                            int damage = Convert.ToInt32(reader["damage"]);
                             string? type = reader["type"].ToString();
                             string? monsterTypeString = reader["monstertype"].ToString();
 
@@ -535,6 +598,254 @@ namespace MonsterTradingCardsGame.Database
             }
 
             return null;
+        }
+
+        /// <summary>
+        ///     Checks, if a card with the given id exists
+        /// </summary>
+        /// <param name="cardID">ID of the card</param>
+        /// <returns>If card exists</returns>
+        public bool CheckCardExists(string cardID)
+        {
+            bool exists = false;
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT 1 FROM cards WHERE cardID = @cardID LIMIT 1", connection))
+                {
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+                    exists = cmd.ExecuteScalar() != null;
+                }
+                connection.Close();
+            }
+
+            return exists;
+        }
+
+        /// <summary>
+        ///     Creates and adds a card of type monster to the database
+        /// </summary>
+        /// <param name="cardID">Id of card</param>
+        /// <param name="name">Name of card</param>
+        /// <param name="element">Element of card</param>
+        /// <param name="damage">Damage of card</param>
+        /// <param name="monstertype">Type of monster</param>
+        public void CreateMonsterCard(string cardID, string name, string element, int damage, string monstertype)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("INSERT INTO cards (cardID, name, element, damage, type, monstertype) " +
+                "VALUES (@cardID, @name, @element, @damage, @type, @monstertype)", connection))
+                {
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+                    cmd.Parameters.AddWithValue("@name", name);
+                    cmd.Parameters.AddWithValue("@element", element);
+                    cmd.Parameters.AddWithValue("@damage", damage);
+                    cmd.Parameters.AddWithValue("@type", CardTypes.Monster.ToString());
+                    cmd.Parameters.AddWithValue("@monstertype", monstertype);
+
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
+        }
+
+        /// <summary>
+        ///     Creates and adds a card of type spell to the database
+        /// </summary>
+        /// <param name="cardID">Id of card</param>
+        /// <param name="name">Name of card</param>
+        /// <param name="element">Element of card</param>
+        /// <param name="damage">Damage of card</param>
+        public void CreateSpellCard(string cardID, string name, string element, int damage)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("INSERT INTO cards (cardID, name, element, damage, type) " +
+                "VALUES (@cardID, @name, @element, @damage, @type)", connection))
+                {
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+                    cmd.Parameters.AddWithValue("@name", name);
+                    cmd.Parameters.AddWithValue("@element", element);
+                    cmd.Parameters.AddWithValue("@damage", damage);
+                    cmd.Parameters.AddWithValue("@type", CardTypes.Spell.ToString());
+
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
+        }
+
+        /// <summary>
+        ///     Creates a package with the given list of cards
+        /// </summary>
+        /// <param name="cardIDs">List with ids of cards</param>
+        public void CreatePackage(List<string> cardIDs)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("INSERT INTO packages (card1ID, card2ID, card3ID, card4ID, card5ID) " +
+                "VALUES (@card1ID, @card2ID, @card3ID, @card4ID, @card5ID)", connection))
+                {
+                    for (int i = 0; i < cardIDs.Count; i++)
+                    {
+                        cmd.Parameters.AddWithValue($"@card{i + 1}ID", cardIDs[i]);
+                    }
+
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
+        }
+
+        /// <summary>
+        ///     Checks, if there is a package in the database
+        /// </summary>
+        /// <returns>If a package is available</returns>
+        public bool CheckPackagesAvailable()
+        {
+            bool exists = false;
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT 1 FROM packages LIMIT 1", connection))
+                {
+                    exists = cmd.ExecuteScalar() != null;
+                }
+                connection.Close();
+            }
+
+            return exists;
+        }
+
+        /// <summary>
+        ///     User buys a package, acquires the cards and deletes the package from the database
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        public void BuyPackage(string username)
+        {
+            // Get the latest available pack
+            int packID = GetFirstAvailablePackID();
+            List<string> cardIDs = GetCardsFromPackage(packID);
+
+            // Update user's coins
+            int newCoins = GetUsersCoins(username) - 5;
+            UpdateUsersCoins(username, newCoins);
+
+            // Add user's ID to all cards in the purchased pack
+            AddUserToPackCards(username, cardIDs);
+
+            // Delete the purchased pack
+            DeletePackage(packID);
+        }
+
+        /// <summary>
+        ///     Gets the first available package to purchase
+        /// </summary>
+        /// <returns>The id of an available package</returns>
+        public int GetFirstAvailablePackID()
+        {
+            int packID;
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT packID FROM packages LIMIT 1", connection))
+                {
+                    packID = (int)cmd.ExecuteScalar();
+                }
+
+                connection.Close();
+            }
+
+            return packID;
+        }
+
+        /// <summary>
+        ///     Gets the cards in a package
+        /// </summary>
+        /// <param name="packID">Id of package</param>
+        /// <returns>List with cards from the given package</returns>
+        public List<string> GetCardsFromPackage(int packID)
+        {
+            List<string> cardIDs = new List<string>();
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM packages WHERE packID = @packID", connection))
+                {
+                    cmd.Parameters.AddWithValue($"@packID", packID);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            cardIDs.Add(reader["card1ID"].ToString() ?? "");
+                            cardIDs.Add(reader["card2ID"].ToString() ?? "");
+                            cardIDs.Add(reader["card3ID"].ToString() ?? "");
+                            cardIDs.Add(reader["card4ID"].ToString() ?? "");
+                            cardIDs.Add(reader["card5ID"].ToString() ?? "");
+                        }
+                    }
+                }
+                connection.Close();
+            }
+
+            return cardIDs;
+        }
+
+        /// <summary>
+        ///     Sets the user as the owner of the acquired cards
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="cardIDs">List with IDs of cards</param>
+        public void AddUserToPackCards(string username, List<string> cardIDs)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                foreach (string id in cardIDs)
+                {
+                    using (NpgsqlCommand cmd = new NpgsqlCommand("UPDATE cards SET userID = (SELECT userID FROM users WHERE username = @username)" +
+                        "WHERE cardID = @cardID", connection))
+                    {
+                        cmd.Parameters.AddWithValue($"@username", username);
+                        cmd.Parameters.AddWithValue($"@cardID", id);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                connection.Close();
+            }
+        }
+
+        /// <summary>
+        ///     Deletes the purchased package
+        /// </summary>
+        /// <param name="packID">Id of package</param>
+        public void DeletePackage(int packID)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("DELETE FROM packages WHERE packID = @packID", connection))
+                {
+                    cmd.Parameters.AddWithValue($"@packID", packID);
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
         }
 
         /// <summary>
