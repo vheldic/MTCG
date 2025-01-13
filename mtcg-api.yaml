@@ -3,7 +3,7 @@ info:
   title: Monster Trading Cards Game
   description: |-
     This is the specification of the required API endpoints for the MTCG server.
-  version: 1.0.0
+  version: 1.0.1
 servers:
   - url: http://localhost:10001
 tags:
@@ -395,6 +395,27 @@ paths:
           description: The offered card is not owned by the user, or the requirements are not met (Type, MinimumDamage), or the offered card is locked in the deck, or the user tries to trade with self
         '404':
           description: The provided deal ID was not found.
+      security:
+        - mtcgAuth: []
+  /coins:
+    put:
+      tags:
+        - users
+      summary: Spinns the daily wheel for coins.
+      description: Spinns the daily wheel for coins. Only one spin per day is allowed.
+      responses:
+        '200':
+          description: Coins have been added successfully.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 10 coins won
+                description: Amount of coins won.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          description: Daily wheel was already used today.
       security:
         - mtcgAuth: []
 
