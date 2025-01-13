@@ -417,7 +417,6 @@ namespace MonsterTradingCardsGame.Http
                             catch (Exception e)
                             {
                                 Console.WriteLine("Error: " + e.Message);
-                                Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
                                 break;
                             }
 
@@ -432,11 +431,13 @@ namespace MonsterTradingCardsGame.Http
                             List<string> cardIDs = new List<string>();
                             foreach (string id in body)
                             {
-                                Card? card = Database.GetUsersCardById(username, id);
-                                if (card == null) break;
+                                if (!Database.CheckUserOwnsCard(username, id)) 
+                                    break;
+                                
                                 cardIDs.Add(id);
                             }
 
+                            // Check if all cards belong to user
                             if (cardIDs.Count != 4)
                             {
                                 Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 403);
@@ -448,6 +449,7 @@ namespace MonsterTradingCardsGame.Http
                             Response = httpResponse.GetResponseMessage(httpMethod, endpoint, 200);
                             break;
 
+                        // Spins the daily wheel for coins
                         case "/coins":
                             // Check if token is used and valid
                             if (!Database.CheckTokenIsValid(bearer_token))

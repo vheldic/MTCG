@@ -424,44 +424,29 @@ namespace MonsterTradingCardsGame.Database
         }
 
         /// <summary>
-        ///     Gets the card belonging to the user with the given username that has the given id
+        ///     Checks, if the given card belongs to the given user
         /// </summary>
         /// <param name="username">Username of user</param>
-        /// <param name="id">Id of card</param>
-        /// <returns>The user's card with the given id</returns>
-        public Card? GetUsersCardById(string username, string id)
+        /// <param name="cardID">Id of card</param>
+        /// <returns>If the given card belongs to the given user</returns>
+        public bool CheckUserOwnsCard(string username, string cardID)
         {
-            Card? card = null;
-
+            bool owns = false;
             using (connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
 
-                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM cards WHERE userID = (SELECT userID FROM users WHERE username = @username)", connection))
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT 1 FROM cards WHERE cardID = @cardID AND userID = (SELECT userID FROM users WHERE username = @username) LIMIT 1", connection))
                 {
                     cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
 
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            string? elementString = reader["element"].ToString();
-                            string? name = reader["name"].ToString();
-                            int damage = Convert.ToInt32(reader["damage"]);
-                            string? type = reader["type"].ToString();
-                            string? monsterTypeString = reader["monstertype"].ToString();
-
-                            if (monsterTypeString == CardTypes.Spell.ToString())
-                                return GetCardFromReaderAttributes(elementString, name, damage, type, null);
-                            else if (monsterTypeString == CardTypes.Monster.ToString())
-                                return GetCardFromReaderAttributes(elementString, name, damage, type, monsterTypeString);
-                        }
-                    }
+                    owns = cmd.ExecuteScalar() != null;
                 }
                 connection.Close();
             }
 
-            return card;
+            return owns;
         }
 
         /// <summary>
@@ -482,18 +467,20 @@ namespace MonsterTradingCardsGame.Database
 
                     using (var reader = cmd.ExecuteReader())
                     {
-                        if (reader.Read())
+                        while (reader.Read())
                         {
-                            string? elementString = reader["element"].ToString();
-                            string? name = reader["name"].ToString();
-                            int damage = Convert.ToInt32(reader["damage"]);
-                            string? type = reader["type"].ToString();
-                            string? monsterTypeString = reader["monstertype"].ToString();
+                            string? name = reader["Name"].ToString();
+                            string? elementString = reader["Element"].ToString();
+                            int damage = Convert.ToInt32(reader["Damage"]);
+                            string? type = reader["Type"].ToString();
 
-                            if (monsterTypeString == CardTypes.Spell.ToString())
+                            if (type == CardTypes.Spell.ToString())
                                 cards.Add(GetCardFromReaderAttributes(elementString, name, damage, type, null));
-                            else if (monsterTypeString == CardTypes.Monster.ToString())
+                            else if (type == CardTypes.Monster.ToString())
+                            {
+                                string? monsterTypeString = reader["Monstertype"].ToString();
                                 cards.Add(GetCardFromReaderAttributes(elementString, name, damage, type, monsterTypeString));
+                            }
                         }
                     }
                 }
@@ -528,15 +515,15 @@ namespace MonsterTradingCardsGame.Database
                         {
                             if (reader.Read())
                             {
-                                string? elementString = reader["element"].ToString();
-                                string? name = reader["name"].ToString();
-                                int damage = (int)reader["damage"];
-                                string? type = reader["type"].ToString();
-                                string? monsterTypeString = reader["monstertype"].ToString();
+                                string? elementString = reader["Element"].ToString();
+                                string? name = reader["Name"].ToString();
+                                int damage = Convert.ToInt32(reader["Damage"]);
+                                string? type = reader["Type"].ToString();
+                                string? monsterTypeString = reader["Monstertype"].ToString();
 
-                                if (monsterTypeString == CardTypes.Spell.ToString())
+                                if (type == CardTypes.Spell.ToString())
                                     deck.Add(GetCardFromReaderAttributes(elementString, name, damage, type, null));
-                                else if (monsterTypeString == CardTypes.Monster.ToString())
+                                else if (type == CardTypes.Monster.ToString())
                                     deck.Add(GetCardFromReaderAttributes(elementString, name, damage, type, monsterTypeString));
                             }
                         }
@@ -546,6 +533,32 @@ namespace MonsterTradingCardsGame.Database
             }
 
             return deck;
+        }
+
+        /// <summary>
+        ///     Updates the deck of the given user
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="cardIDs">List with IDs of cards to update deck</param>
+        public void UpdateUsersDeck(string username, List<string> cardIDs)
+        {
+            using (connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand("INSERT INTO decks (userID, card1ID, card2ID, card3ID, card4ID) " +
+                "VALUES ((SELECT userID FROM users WHERE username = @username), @card1ID, @card2ID, @card3ID, @card4ID)", connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    for (int i = 0; i < cardIDs.Count; i++)
+                    {
+                        cmd.Parameters.AddWithValue($"@card{i + 1}ID", cardIDs[i]);
+                    }
+
+                    cmd.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
         }
 
         /// <summary>
@@ -559,6 +572,7 @@ namespace MonsterTradingCardsGame.Database
         /// <returns>Card object with the given attributes</returns>
         private Card? GetCardFromReaderAttributes(string? elementString, string? name, int damage, string? type, string? monsterTypeString)
         {
+            Card card = null;
             // Get element
             ElementType element = new ElementType();
 
@@ -572,7 +586,7 @@ namespace MonsterTradingCardsGame.Database
             // Create card object
             if (type == CardTypes.Spell.ToString())
             {
-                return new Spell(name ?? "", element, damage);
+                card = new Spell(name ?? "", element, damage);
             }
             else if (type == CardTypes.Monster.ToString())
             {
@@ -594,10 +608,10 @@ namespace MonsterTradingCardsGame.Database
                 else if (monsterTypeString == MonsterType.FireElve.ToString())
                     monsterType = MonsterType.FireElve;
 
-                return new Monster(name ?? "", monsterType, element, damage);
+                card = new Monster(name ?? "", monsterType, element, damage);
             }
 
-            return null;
+            return card;
         }
 
         /// <summary>
@@ -842,32 +856,6 @@ namespace MonsterTradingCardsGame.Database
                 using (NpgsqlCommand cmd = new NpgsqlCommand("DELETE FROM packages WHERE packID = @packID", connection))
                 {
                     cmd.Parameters.AddWithValue($"@packID", packID);
-                    cmd.ExecuteNonQuery();
-                }
-                connection.Close();
-            }
-        }
-
-        /// <summary>
-        ///     Updates the deck of the user
-        /// </summary>
-        /// <param name="username">Username of user</param>
-        /// <param name="cardIDs">List of id of cards to update deck</param>
-        public void UpdateUsersDeck(string username, List<string> cardIDs)
-        {
-            using (connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                using (NpgsqlCommand cmd = new NpgsqlCommand("INSERT INTO decks (userID, card1ID, card2ID, card3ID, card4ID) " +
-                "VALUES ((SELECT userID FROM users WHERE username = @username), @card1ID, @card2ID, @card3ID, @card4ID)", connection))
-                {
-                    cmd.Parameters.AddWithValue("@username", username);
-                    for (int i = 0; i < cardIDs.Count; i++)
-                    {
-                        cmd.Parameters.AddWithValue($"@card{i + 1}", cardIDs[i]);
-                    }
-
                     cmd.ExecuteNonQuery();
                 }
                 connection.Close();
